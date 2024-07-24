@@ -1,0 +1,112 @@
+// RECENT-SHOPPING-TRENDS (RST)
+//
+// copyright Vadim Manakov 2024 (c)
+//
+// Connect with me on LinkedIn at https://www.linkedin.com/in/vadim-manakov-902a65135/
+//
+//
+// version 0.9 (still in debugging but working fine for most accounts)
+//
+//
+//
+//    ——— HOW TO: PLEASE READ ———
+// 
+// COPY THIS TEMPLATE TO GOOGLE SHEETS:  
+// https://docs.google.com/spreadsheets/d/1PBpmfiPPj8titYVjTPuGzi-FNLRtH6VQC2g9kiDgeEI/copy
+//
+// Now rename your template accordingly and put YOUR URL between quotes ("") in var SPREADSHEET_URL
+//
+// authorise, save & run your script
+//
+//  __________________________________
+//
+//
+// If you find any bugs, or have any ideas - tell me on LinkedIn - link above
+
+
+
+var SPREADSHEET_URL = "";
+var daysAgo = 30;
+var conversionDelay = 0;
+var impressionThreshold = 50;
+
+function main() {
+    // first period
+    var products = getFilteredShoppingProducts(daysAgo, 0);
+    pushToSpreadsheet(products, 'h_0');
+    
+    // second period
+    var productsExtended = getFilteredShoppingProducts(daysAgo, 1);
+    pushToSpreadsheet(productsExtended, 'h_1');
+  
+    // third period
+    var productsExtended = getFilteredShoppingProducts(daysAgo, 2);
+    pushToSpreadsheet(productsExtended, 'h_2');
+  
+    // all periods
+    var productsExtended = getFilteredShoppingProducts(daysAgo, "a");
+    pushToSpreadsheet(productsExtended, 'all_periods');
+}
+
+function getFilteredShoppingProducts(daysAgo, ExtendedPeriod) {
+    var endDate = new Date();
+    var startDate = new Date();
+    startDate.setDate(startDate.getDate() - daysAgo - conversionDelay);
+    endDate.setDate(endDate.getDate() - conversionDelay);
+    Logger.log("start basic " + startDate);
+    Logger.log("end basic " + endDate);
+
+    if (ExtendedPeriod == 1) {
+        endDate = new Date();
+        startDate = new Date();
+        endDate.setDate(endDate.getDate() - daysAgo - conversionDelay);
+        startDate.setDate(startDate.getDate() - daysAgo * 2 - conversionDelay);
+    } else if (ExtendedPeriod == 2) {
+        endDate = new Date();
+        startDate = new Date();
+        endDate.setDate(endDate.getDate() - daysAgo * 2 - conversionDelay);
+        startDate.setDate(startDate.getDate() - daysAgo * 3 - conversionDelay);
+    } else if (ExtendedPeriod == "a") {
+        endDate = new Date();
+        startDate = new Date();
+        endDate.setDate(endDate.getDate() - conversionDelay);
+        startDate.setDate(startDate.getDate() - daysAgo * 3 - conversionDelay);
+    }
+
+    var dateFrom = Utilities.formatDate(startDate, AdWordsApp.currentAccount().getTimeZone(), 'yyyyMMdd');
+    var dateTo = Utilities.formatDate(endDate, AdWordsApp.currentAccount().getTimeZone(), 'yyyyMMdd');
+    
+    var query = "SELECT OfferId, Impressions, Clicks, Ctr, Cost, Conversions, ConversionValue, ProductTitle " +
+                "FROM SHOPPING_PERFORMANCE_REPORT " +
+                "DURING " + dateFrom + "," + dateTo;
+    var products = [];
+    var report = AdWordsApp.report(query);
+    var rows = report.rows();
+    
+    while (rows.hasNext()) {
+        var row = rows.next();
+        var impressions = parseInt(row['Impressions']);
+        if (impressions >= impressionThreshold) {
+            var product = [
+                row['OfferId'],
+                impressions.toString(),
+                row['Clicks'].toString(),
+                row['Cost'].toString(),
+                row['Conversions'].toString(),
+                row['ConversionValue'].toString(),
+                row['ProductTitle']
+            ];
+            products.push(product);
+        }
+    }
+    return products;
+}
+
+function pushToSpreadsheet(data, sheetName) {
+    var spreadsheet = SpreadsheetApp.openByUrl(SPREADSHEET_URL);
+    var sheet = spreadsheet.getSheetByName(sheetName);
+    sheet.clearContents();
+    if (data.length > 0) {
+        sheet.getRange(2, 1, data.length, data[0].length).setValues(data);
+    }
+}
