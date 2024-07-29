@@ -71,7 +71,7 @@ function getFilteredShoppingProducts(daysAgo, ExtendedPeriod, campaignNames) {
         startDate.setDate(startDate.getDate() - daysAgo * 3 - conversionDelay);
     }
 
-    var campaignFilter = campaignNames.length > 0 ? "WHERE CampaignName IN ('" + campaignNames.join("','") + "')" : "";
+    var campaignFilter = campaignNames.length > 0 ? "WHERE CampaignName IN ['" + campaignNames.join("','") + "']" : "";
     
     var dateFrom = Utilities.formatDate(startDate, AdWordsApp.currentAccount().getTimeZone(), 'yyyyMMdd');
     var dateTo = Utilities.formatDate(endDate, AdWordsApp.currentAccount().getTimeZone(), 'yyyyMMdd');
