@@ -1,0 +1,113 @@
+// RECENT-SHOPPING-TRENDS (RST) - v0.9.1
+//
+// copyright Vadim Manakov 2024 (c)
+//
+// Connect with me on LinkedIn at https://www.linkedin.com/in/vadim-manakov-902a65135/
+//
+//
+// version 0.9 (still in debugging but working fine for most accounts)
+//
+//
+//
+//    ——— HOW TO: PLEASE READ ———
+// 
+// COPY THIS TEMPLATE TO GOOGLE SHEETS:  
+// https://docs.google.com/spreadsheets/d/1tZiSm-Q78M6LWXCOP--89CsgmJ4EirWi4Ot9ke_Is84/copy
+//
+// Now rename your template accordingly and put YOUR URL between quotes ("") in var SPREADSHEET_URL
+// Define your period length (daysAgo), conversion delay and impression threshold. You can use a filter for specific campaigns via campaign names optionally.
+// authorise, save & run your script
+//
+//  __________________________________
+//
+//
+// If you find any bugs, or have any ideas - tell me on LinkedIn - link above
+
+
+var SPREADSHEET_URL = "";
+var daysAgo = 30;
+var conversionDelay = 0;
+var impressionThreshold = 5; 
+var campaignNames = []; // Filter for campaigns: Example use: ["Campaign-Name-1", "Campaign-Name-2"]
+
+function main() {
+    // Verarbeite Daten für den ersten Zeitraum und schiebe sie in das erste Sheet
+    var products = getFilteredShoppingProducts(daysAgo, 0, campaignNames);
+    pushToSpreadsheet(products, 'h_0');
+    
+    // Verarbeite Daten für den erweiterten Zeitraum und schiebe sie in das zweite Sheet
+    var productsExtended = getFilteredShoppingProducts(daysAgo, 1, campaignNames);
+    pushToSpreadsheet(productsExtended, 'h_1');
+  
+    // Verarbeite Daten für den erweiterten Zeitraum und schiebe sie in das dritte Sheet
+    var productsExtended = getFilteredShoppingProducts(daysAgo, 2, campaignNames);
+    pushToSpreadsheet(productsExtended, 'h_2');
+  
+    // Verarbeite Daten für den erweiterten Zeitraum und schiebe sie in das vierte Sheet
+    var productsExtended = getFilteredShoppingProducts(daysAgo, "a", campaignNames);
+    pushToSpreadsheet(productsExtended, 'all_periods');
+}
+
+function getFilteredShoppingProducts(daysAgo, ExtendedPeriod, campaignNames) {
+    var endDate = new Date();
+    var startDate = new Date();
+    startDate.setDate(startDate.getDate() - daysAgo - conversionDelay);
+    endDate.setDate(endDate.getDate() - conversionDelay);
+
+    if (ExtendedPeriod == 1) {
+        endDate = new Date();
+        startDate = new Date();
+        endDate.setDate(endDate.getDate() - daysAgo - conversionDelay);
+        startDate.setDate(startDate.getDate() - daysAgo * 2 - conversionDelay);
+    } else if (ExtendedPeriod == 2) {
+        endDate = new Date();
+        startDate = new Date();
+        endDate.setDate(endDate.getDate() - daysAgo * 2 - conversionDelay);
+        startDate.setDate(startDate.getDate() - daysAgo * 3 - conversionDelay);
+    } else if (ExtendedPeriod == "a") {
+        endDate = new Date();
+        startDate = new Date();
+        endDate.setDate(endDate.getDate() - conversionDelay);
+        startDate.setDate(startDate.getDate() - daysAgo * 3 - conversionDelay);
+    }
+
+    var dateFrom = Utilities.formatDate(startDate, AdWordsApp.currentAccount().getTimeZone(), 'yyyyMMdd');
+    var dateTo = Utilities.formatDate(endDate, AdWordsApp.currentAccount().getTimeZone(), 'yyyyMMdd');
+    
+    var campaignFilter = "CampaignName IN ['" + campaignNames.join("','") + "']";
+    var query = "SELECT OfferId, Impressions, Clicks, Ctr, Cost, Conversions, ConversionValue, ProductTitle, CampaignName " +
+                "FROM SHOPPING_PERFORMANCE_REPORT " +
+                "WHERE " + campaignFilter + " " +
+                "DURING " + dateFrom + "," + dateTo;
+    var products = [];
+    var report = AdWordsApp.report(query);
+    var rows = report.rows();
+    
+    while (rows.hasNext()) {
+        var row = rows.next();
+        var impressions = parseInt(row['Impressions']);
+        if (impressions >= impressionThreshold) {
+            var product = [
+                row['OfferId'],
+                impressions.toString(),
+                row['Clicks'].toString(),
+                row['Cost'].toString(),
+                row['Conversions'].toString(),
+                row['ConversionValue'].toString(),
+                row['ProductTitle'],
+                row['CampaignName']
+            ];
+            products.push(product);
+        }
+    }
+    return products;
+}
+
+function pushToSpreadsheet(data, sheetName) {
+    var spreadsheet = SpreadsheetApp.openByUrl(SPREADSHEET_URL);
+    var sheet = spreadsheet.getSheetByName(sheetName);
+    sheet.clearContents();
+    if (data.length > 0) {
+        sheet.getRange(2, 1, data.length, data[0].length).setValues(data);
+    }
+}
