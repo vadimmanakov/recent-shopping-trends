@@ -53,7 +53,7 @@ function getFilteredShoppingProducts(daysAgo, ExtendedPeriod, campaignNames) {
     var startDate = new Date();
     startDate.setDate(startDate.getDate() - daysAgo - conversionDelay);
     endDate.setDate(endDate.getDate() - conversionDelay);
-
+  
     if (ExtendedPeriod == 1) {
         endDate = new Date();
         startDate = new Date();
@@ -71,13 +71,14 @@ function getFilteredShoppingProducts(daysAgo, ExtendedPeriod, campaignNames) {
         startDate.setDate(startDate.getDate() - daysAgo * 3 - conversionDelay);
     }
 
+    var campaignFilter = campaignNames.length > 0 ? "WHERE CampaignName IN ('" + campaignNames.join("','") + "')" : "";
+    
     var dateFrom = Utilities.formatDate(startDate, AdWordsApp.currentAccount().getTimeZone(), 'yyyyMMdd');
     var dateTo = Utilities.formatDate(endDate, AdWordsApp.currentAccount().getTimeZone(), 'yyyyMMdd');
     
-    var campaignFilter = "CampaignName IN ['" + campaignNames.join("','") + "']";
     var query = "SELECT OfferId, Impressions, Clicks, Ctr, Cost, Conversions, ConversionValue, ProductTitle, CampaignName " +
                 "FROM SHOPPING_PERFORMANCE_REPORT " +
-                "WHERE " + campaignFilter + " " +
+                campaignFilter + " " +
                 "DURING " + dateFrom + "," + dateTo;
     var products = [];
     var report = AdWordsApp.report(query);
